@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS "HubSpot"."Contact"
+(
+    "contactId" BIGINT NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "firstName" VARCHAR(100) NULL,
+    "lastName" VARCHAR(100) NULL,
+    "phone" VARCHAR(50) NULL,
+    "mobilePhone" VARCHAR(50) NULL,
+    "jobTitle" VARCHAR(100) NULL,
+    "associatedCompanyId" BIGINT NULL,
+    "ownerId" BIGINT NULL,
+    "lifecyclestage" VARCHAR(50) NOT NULL CONSTRAINT "DF_HubSpot_Contact_lifecyclestage" DEFAULT (N'lead'),
+    "leadStatus" VARCHAR(50) NULL,
+    "address" VARCHAR(255) NULL,
+    "city" VARCHAR(100) NULL,
+    "state" VARCHAR(100) NULL,
+    "zip" VARCHAR(30) NULL,
+    "country" VARCHAR(100) NULL,
+    "createdAt" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_HubSpot_Contact_createdAt" DEFAULT (CURRENT_TIMESTAMP),
+    "updatedAt" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_HubSpot_Contact_updatedAt" DEFAULT (CURRENT_TIMESTAMP),
+    "archived" BOOLEAN NOT NULL CONSTRAINT "DF_HubSpot_Contact_archived" DEFAULT FALSE,
+    CONSTRAINT "PK_HubSpot_Contact" PRIMARY KEY ("contactId"),
+    CONSTRAINT "FK_HubSpot_Contact_associatedCompanyId" FOREIGN KEY ("associatedCompanyId") REFERENCES "HubSpot"."Company" ("companyId"),
+    CONSTRAINT "FK_HubSpot_Contact_ownerId" FOREIGN KEY ("ownerId") REFERENCES "HubSpot"."Owner" ("ownerId")
+);

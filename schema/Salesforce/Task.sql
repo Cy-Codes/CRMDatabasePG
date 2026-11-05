@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS "Salesforce"."Task"
+(
+    "Id" VARCHAR(18) NOT NULL,
+    "WhoId" VARCHAR(18) NULL,
+    "WhatId" VARCHAR(18) NULL,
+    "WhoCount" INT NOT NULL CONSTRAINT "DF_Salesforce_Task_WhoCount" DEFAULT FALSE,
+    "WhatCount" INT NOT NULL CONSTRAINT "DF_Salesforce_Task_WhatCount" DEFAULT FALSE,
+    "Subject" VARCHAR(255) NOT NULL,
+    "ActivityDate" DATE NULL,
+    "Status" VARCHAR(40) NOT NULL CONSTRAINT "DF_Salesforce_Task_Status" DEFAULT (N'Not Started'),
+    "Priority" VARCHAR(40) NOT NULL CONSTRAINT "DF_Salesforce_Task_Priority" DEFAULT (N'Normal'),
+    "IsHighPriority" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Task_IsHighPriority" DEFAULT FALSE,
+    "OwnerId" VARCHAR(18) NOT NULL,
+    "Description" TEXT NULL,
+    "IsDeleted" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Task_IsDeleted" DEFAULT FALSE,
+    "IsClosed" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Task_IsClosed" DEFAULT FALSE,
+    "CreatedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Task_CreatedDate" DEFAULT (CURRENT_TIMESTAMP),
+    "CreatedById" VARCHAR(18) NOT NULL,
+    "LastModifiedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Task_LastModifiedDate" DEFAULT (CURRENT_TIMESTAMP),
+    "LastModifiedById" VARCHAR(18) NOT NULL,
+    CONSTRAINT "PK_Salesforce_Task" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Salesforce_Task_OwnerId" FOREIGN KEY ("OwnerId") REFERENCES "Salesforce"."User" ("Id"),
+    CONSTRAINT "FK_Salesforce_Task_CreatedById" FOREIGN KEY ("CreatedById") REFERENCES "Salesforce"."User" ("Id"),
+    CONSTRAINT "FK_Salesforce_Task_LastModifiedById" FOREIGN KEY ("LastModifiedById") REFERENCES "Salesforce"."User" ("Id")
+);

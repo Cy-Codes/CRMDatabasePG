@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS "Salesforce"."Event"
+(
+    "Id" VARCHAR(18) NOT NULL,
+    "WhoId" VARCHAR(18) NULL,
+    "WhatId" VARCHAR(18) NULL,
+    "WhoCount" INT NOT NULL CONSTRAINT "DF_Salesforce_Event_WhoCount" DEFAULT FALSE,
+    "WhatCount" INT NOT NULL CONSTRAINT "DF_Salesforce_Event_WhatCount" DEFAULT FALSE,
+    "Subject" VARCHAR(255) NOT NULL,
+    "Location" VARCHAR(255) NULL,
+    "IsAllDayEvent" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Event_IsAllDayEvent" DEFAULT FALSE,
+    "ActivityDateTime" TIMESTAMPTZ NULL,
+    "ActivityDate" DATE NULL,
+    "DurationInMinutes" INTEGER NULL,
+    "StartDateTime" TIMESTAMPTZ NOT NULL,
+    "EndDateTime" TIMESTAMPTZ NOT NULL,
+    "Description" TEXT NULL,
+    "OwnerId" VARCHAR(18) NOT NULL,
+    "IsDeleted" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Event_IsDeleted" DEFAULT FALSE,
+    "CreatedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Event_CreatedDate" DEFAULT (CURRENT_TIMESTAMP),
+    "CreatedById" VARCHAR(18) NOT NULL,
+    "LastModifiedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Event_LastModifiedDate" DEFAULT (CURRENT_TIMESTAMP),
+    "LastModifiedById" VARCHAR(18) NOT NULL,
+    CONSTRAINT "PK_Salesforce_Event" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_Salesforce_Event_OwnerId" FOREIGN KEY ("OwnerId") REFERENCES "Salesforce"."User" ("Id"),
+    CONSTRAINT "FK_Salesforce_Event_CreatedById" FOREIGN KEY ("CreatedById") REFERENCES "Salesforce"."User" ("Id"),
+    CONSTRAINT "FK_Salesforce_Event_LastModifiedById" FOREIGN KEY ("LastModifiedById") REFERENCES "Salesforce"."User" ("Id")
+);
