@@ -9,11 +9,11 @@ import subprocess
 import sys
 
 def main():
-    host = os.environ.get("DB_HOST", "localhost")
-    port = os.environ.get("DB_PORT", "5432")
-    dbname = os.environ.get("DB_NAME", "crm_database")
-    user = os.environ.get("DB_USER", "postgres")
-    password = os.environ.get("DB_PASSWORD", "postgres")
+    host = os.environ.get("DB_HOST", os.environ.get("PGHOST", "localhost"))
+    port = os.environ.get("DB_PORT", os.environ.get("PGPORT", "5432"))
+    dbname = os.environ.get("DB_NAME", os.environ.get("PGDATABASE", "CRMDatabase"))
+    user = os.environ.get("DB_USER", os.environ.get("PGUSER", "postgres"))
+    password = os.environ.get("DB_PASSWORD", os.environ.get("PGPASSWORD", "postgres"))
 
     test_dir = os.path.dirname(os.path.abspath(__file__))
     suites = [

@@ -25,8 +25,7 @@ def run_psql(sql=None, filepath=None, check=True):
         cmd.extend(["--single-transaction", "-f", filepath])
     res = subprocess.run(cmd, env=env, capture_output=True, text=True)
     if check and res.returncode != 0:
-        print(f"Error executing SQL:
-{res.stderr}", file=sys.stderr)
+        print(f"Error executing SQL:\n{res.stderr}", file=sys.stderr)
         sys.exit(res.returncode)
     return res
 

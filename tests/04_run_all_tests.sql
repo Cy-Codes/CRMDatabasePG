@@ -11,13 +11,13 @@
 \echo '========================================================================'
 
 \echo '--- [1/3] Running Schema Structure Tests ---'
-\i /Users/cy/codes/Work/CRMDatabasePG/tests/01_schema_structure_tests.sql
+\ir 01_schema_structure_tests.sql
 
 \echo '--- [2/3] Running Data Integrity & Seeding Tests ---'
-\i /Users/cy/codes/Work/CRMDatabasePG/tests/02_data_integrity_and_seed_tests.sql
+\ir 02_data_integrity_and_seed_tests.sql
 
 \echo '--- [3/3] Running Constraint Enforcement & Invariant Tests ---'
-\i /Users/cy/codes/Work/CRMDatabasePG/tests/03_constraint_enforcement_tests.sql
+\ir 03_constraint_enforcement_tests.sql
 
 \echo '========================================================================'
 \echo 'ALL POSTGRESQL CRM DATABASE TESTS COMPLETED SUCCESSFULLY'

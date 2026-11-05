@@ -16,7 +16,7 @@ export PGPASSWORD
 echo "==> Connecting to PostgreSQL at ${PGHOST}:${PGPORT}/${PGDATABASE} as user '${PGUSER}'..."
 
 # Ensure target database exists
-psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -tc "SELECT 1 FROM pg_database WHERE datname = '${PGDATABASE}'" | grep -q 1 || psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -c "CREATE DATABASE "${PGDATABASE}";"
+psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${PGDATABASE}'" | grep -q 1 || psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d postgres -c "CREATE DATABASE \"${PGDATABASE}\";"
 
 # Create migration tracking table if not exists
 psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -c "
@@ -41,8 +41,8 @@ echo "==> Scanning migrations directory: ${MIGRATIONS_DIR}"
 
 for migration_file in $(ls "${MIGRATIONS_DIR}"/V*.sql | sort -V); do
     filename="$(basename "${migration_file}")"
-    version="$(echo "${filename}" | sed -E 's/^V([0-9]+)__.*$//')"
-    description="$(echo "${filename}" | sed -E 's/^V[0-9]+__(.*)\.sql$//' | tr '_' ' ')"
+    version="$(echo "${filename}" | sed -E 's/^V([0-9]+)__.*$/\1/')"
+    description="$(echo "${filename}" | sed -E 's/^V[0-9]+__(.*)\.sql$/\1/' | tr '_' ' ')"
 
     # Check if migration already applied
     applied=$(psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -tAc "SELECT 1 FROM public.schema_version WHERE version = '${version}' AND success = TRUE;")
@@ -51,13 +51,13 @@ for migration_file in $(ls "${MIGRATIONS_DIR}"/V*.sql | sort -V); do
         echo "  [SKIP] Migration V${version} (${filename}) already applied."
     else
         echo "  [APPLYING] Migration V${version}: ${filename}..."
-        start_time=$(date +%s%3N)
+        start_time=$(date +%s)
         
         # Execute migration in a single transaction
         psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -v ON_ERROR_STOP=1 --single-transaction -f "${migration_file}"
         
-        end_time=$(date +%s%3N)
-        duration=$((end_time - start_time))
+        end_time=$(date +%s)
+        duration=$(( (end_time - start_time) * 1000 ))
 
         psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${PGDATABASE}" -c "
         INSERT INTO public.schema_version (version, description, script, execution_time_ms, success)

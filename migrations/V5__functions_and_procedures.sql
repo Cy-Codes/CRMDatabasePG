@@ -562,7 +562,7 @@ BEGIN
         b.BUId,
         'Dynamics Division ' || b.N::text,
         CASE WHEN b.N > 1 THEN (SELECT BUId FROM _D365_BU WHERE N = 1 LIMIT 1) ELSE NULL END,
-        0
+        FALSE
     FROM _D365_BU b;
 
     -- 3.2 SystemUsers
@@ -579,7 +579,7 @@ BEGIN
         'D365Last_' || u.N::text,
         'd365_user_' || u.N::text || '@dynamics-corp.com',
         CASE (u.N % 4) WHEN 0 THEN 'Enterprise Account Manager' WHEN 1 THEN 'Solutions Consultant' WHEN 2 THEN 'Service Specialist' ELSE 'System Administrator' END,
-        0
+        FALSE
     FROM _D365_User u
     JOIN _D365_BU b ON u.N = b.N;
 
@@ -970,8 +970,8 @@ BEGIN
         'Enterprise Global Marketing Wave #' || N::text,
         CASE (N % 4) WHEN 0 THEN 'Global Conference' WHEN 1 THEN 'Executive Webinar' WHEN 2 THEN 'Multi-channel Email' ELSE 'Partner Co-Marketing' END,
         CASE (N % 3) WHEN 0 THEN 'In Progress' WHEN 1 THEN 'Completed' ELSE 'Planned' END,
-        (CURRENT_DATE - ((N % 180))::text || ' days')::date,
-        (CURRENT_DATE + ((N % 180))::text || ' days')::date,
+        (CURRENT_DATE - ((N % 180) || ' days')::interval)::date,
+        (CURRENT_DATE + ((N % 180) || ' days')::interval)::date,
         ROUND((500000 + ((N * 19) % 2000000))::numeric, 2),
         ROUND((50000 + ((N * 7) % 250000))::numeric, 2),
         ROUND((45000 + ((N * 6) % 240000))::numeric, 2),
@@ -1371,7 +1371,7 @@ BEGIN
         b.BUId,
         'Dynamics BU Regional Division #' || b.N::text,
         CASE WHEN b.N > 1 THEN (SELECT BUId FROM _D365_Bulk_BU WHERE N = 1 LIMIT 1) ELSE NULL END,
-        0,
+        FALSE,
         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     FROM _D365_Bulk_BU b;
 
@@ -1388,7 +1388,7 @@ BEGIN
         'D365Last_' || u.N::text,
         'd365_rep_' || u.N::text || '@dataverse-etl.com',
         CASE (u.N % 4) WHEN 0 THEN 'Enterprise Account Manager' WHEN 1 THEN 'Solutions Consultant' WHEN 2 THEN 'Service Specialist' ELSE 'System Administrator' END,
-        0,
+        FALSE,
         (CURRENT_TIMESTAMP - ((u.N % 1051200) || ' minutes')::interval),
         (CURRENT_TIMESTAMP - ((u.N % 525600) || ' minutes')::interval)
     FROM _D365_Bulk_User u

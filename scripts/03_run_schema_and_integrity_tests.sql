@@ -23,7 +23,7 @@ BEGIN
     SELECT COUNT(*) INTO v_table_count FROM information_schema.tables WHERE table_schema IN ('Salesforce', 'HubSpot', 'Dynamics365') AND table_type = 'BASE TABLE';
     SELECT COUNT(DISTINCT (tc.table_schema || '.' || tc.table_name)) INTO v_pk_count FROM information_schema.table_constraints tc WHERE tc.table_schema IN ('Salesforce', 'HubSpot', 'Dynamics365') AND tc.constraint_type = 'PRIMARY KEY';
     SELECT COUNT(*) INTO v_fk_count FROM information_schema.table_constraints tc WHERE tc.table_schema IN ('Salesforce', 'HubSpot', 'Dynamics365') AND tc.constraint_type = 'FOREIGN KEY';
-    SELECT COUNT(*) INTO v_proc_count FROM information_schema.routines WHERE specific_schema = 'public' AND routine_name IN ('sp_cleanupallcrmdata', 'sp_seedstandarddata', 'sp_simulateheavyetlload');
+    SELECT COUNT(*) INTO v_proc_count FROM information_schema.routines WHERE specific_schema = 'public' AND LOWER(routine_name) IN ('sp_cleanupallcrmdata', 'sp_seedstandarddata', 'sp_simulateheavyetlload');
 
     RAISE NOTICE '[1/3] Schema structure: % schemas, % tables, % PKs, % FKs, % utility procedures verified.',
         v_schema_count, v_table_count, v_pk_count, v_fk_count, v_proc_count;

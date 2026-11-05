@@ -5,11 +5,11 @@
 # ============================================================================
 set -eo pipefail
 
-DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_NAME:-crm_database}"
-DB_USER="${DB_USER:-postgres}"
-DB_PASSWORD="${DB_PASSWORD:-postgres}"
+DB_HOST="${DB_HOST:-${PGHOST:-localhost}}"
+DB_PORT="${DB_PORT:-${PGPORT:-5432}}"
+DB_NAME="${DB_NAME:-${PGDATABASE:-CRMDatabase}}"
+DB_USER="${DB_USER:-${PGUSER:-postgres}}"
+DB_PASSWORD="${DB_PASSWORD:-${PGPASSWORD:-postgres}}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PGPASSWORD="${DB_PASSWORD}"

@@ -1,0 +1,99 @@
+name: CRMDatabasePG CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  PGHOST: localhost
+  PGPORT: "5432"
+  PGDATABASE: CRMDatabase
+  PGUSER: postgres
+  PGPASSWORD: postgres
+
+jobs:
+  verify-migrations-and-tests:
+    name: Run Migrations, Seed Data & Execute PG Test Suites
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: CRMDatabase
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d CRMDatabase"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Apply Versioned SQL Migrations (Bash Runner)
+        run: |
+          chmod +x ./migrate.sh ./tests/run_tests.sh
+          ./migrate.sh
+
+      - name: Verify Migration Idempotency & Checksums (Python Runner)
+        run: python3 ./migrate.py
+
+      - name: Seed Standard CRM Data (50 records per entity)
+        run: psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f scripts/01_seed_standard_data.sql
+
+      - name: Run Database Test Suites (Bash Runner)
+        run: ./tests/run_tests.sh
+
+      - name: Run Database Test Suites (Python Runner)
+        run: python3 ./tests/run_tests.py
+
+      - name: Verify Heavy ETL Load Procedure (ScaleFactor = 10) & Re-verify Tests
+        run: |
+          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -c 'CALL "public"."sp_SimulateHeavyETLLoad"(10, TRUE);'
+          ./tests/run_tests.sh
+
+  verify-docker-container:
+    name: Build & Verify Self-Initializing Docker Image
+    needs: verify-migrations-and-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Start CRMDatabasePG Container via Docker Compose
+        run: docker compose up -d --build
+
+      - name: Wait for Container Initialization & Standard Seed
+        run: |
+          echo "Waiting for crm_database_pg initialization..."
+          for i in {1..60}; do
+            if docker logs crm_database_pg 2>&1 | grep -q "CRM Database initialization complete"; then
+              echo "Container initialized and seeded!"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "Timed out waiting for container initialization. Logs:"
+              docker logs crm_database_pg
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Execute Test Suites Inside Container
+        run: docker exec crm_database_pg /workspace/tests/run_tests.sh
+
+      - name: Tear Down Container
+        if: always()
+        run: docker compose down -v

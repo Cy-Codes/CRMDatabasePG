@@ -221,41 +221,6 @@ CREATE TABLE "Salesforce"."CampaignMember"
     CONSTRAINT "FK_Salesforce_CampaignMember_LastModifiedById" FOREIGN KEY ("LastModifiedById") REFERENCES "Salesforce"."User" ("Id")
 );
 
--- Table: Salesforce.Opportunity
-CREATE TABLE "Salesforce"."Opportunity"
-(
-    "Id" VARCHAR(18) NOT NULL,
-    "IsDeleted" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsDeleted" DEFAULT FALSE,
-    "AccountId" VARCHAR(18) NULL,
-    "IsPrivate" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsPrivate" DEFAULT FALSE,
-    "Name" VARCHAR(120) NOT NULL,
-    "Description" TEXT NULL,
-    "StageName" VARCHAR(40) NOT NULL,
-    "Amount" DECIMAL(18, 2) NULL,
-    "Probability" DECIMAL(5, 2) NULL,
-    "ExpectedRevenue" DECIMAL(18, 2) GENERATED ALWAYS AS (CAST("Amount" * ("Probability" / 100.0) AS DECIMAL(18, 2))) STORED,
-    "CloseDate" DATE NOT NULL,
-    "Type" VARCHAR(40) NULL,
-    "LeadSource" VARCHAR(40) NULL,
-    "IsClosed" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsClosed" DEFAULT FALSE,
-    "IsWon" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsWon" DEFAULT FALSE,
-    "ForecastCategoryName" VARCHAR(40) NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_ForecastCategoryName" DEFAULT ('Pipeline'),
-    "CampaignId" VARCHAR(18) NULL,
-    "Pricebook2Id" VARCHAR(18) NULL,
-    "OwnerId" VARCHAR(18) NOT NULL,
-    "CreatedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_CreatedDate" DEFAULT (CURRENT_TIMESTAMP),
-    "CreatedById" VARCHAR(18) NOT NULL,
-    "LastModifiedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_LastModifiedDate" DEFAULT (CURRENT_TIMESTAMP),
-    "LastModifiedById" VARCHAR(18) NOT NULL,
-    CONSTRAINT "PK_Salesforce_Opportunity" PRIMARY KEY  ("Id"),
-    CONSTRAINT "FK_Salesforce_Opportunity_AccountId" FOREIGN KEY ("AccountId") REFERENCES "Salesforce"."Account" ("Id"),
-    CONSTRAINT "FK_Salesforce_Opportunity_CampaignId" FOREIGN KEY ("CampaignId") REFERENCES "Salesforce"."Campaign" ("Id"),
-    CONSTRAINT "FK_Salesforce_Opportunity_Pricebook2Id" FOREIGN KEY ("Pricebook2Id") REFERENCES "Salesforce"."Pricebook2" ("Id"),
-    CONSTRAINT "FK_Salesforce_Opportunity_OwnerId" FOREIGN KEY ("OwnerId") REFERENCES "Salesforce"."User" ("Id"),
-    CONSTRAINT "FK_Salesforce_Opportunity_CreatedById" FOREIGN KEY ("CreatedById") REFERENCES "Salesforce"."User" ("Id"),
-    CONSTRAINT "FK_Salesforce_Opportunity_LastModifiedById" FOREIGN KEY ("LastModifiedById") REFERENCES "Salesforce"."User" ("Id")
-);
-
 -- Table: Salesforce.Product2
 CREATE TABLE "Salesforce"."Product2"
 (
@@ -291,6 +256,41 @@ CREATE TABLE "Salesforce"."Pricebook2"
     CONSTRAINT "PK_Salesforce_Pricebook2" PRIMARY KEY  ("Id"),
     CONSTRAINT "FK_Salesforce_Pricebook2_CreatedById" FOREIGN KEY ("CreatedById") REFERENCES "Salesforce"."User" ("Id"),
     CONSTRAINT "FK_Salesforce_Pricebook2_LastModifiedById" FOREIGN KEY ("LastModifiedById") REFERENCES "Salesforce"."User" ("Id")
+);
+
+-- Table: Salesforce.Opportunity
+CREATE TABLE "Salesforce"."Opportunity"
+(
+    "Id" VARCHAR(18) NOT NULL,
+    "IsDeleted" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsDeleted" DEFAULT FALSE,
+    "AccountId" VARCHAR(18) NULL,
+    "IsPrivate" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsPrivate" DEFAULT FALSE,
+    "Name" VARCHAR(120) NOT NULL,
+    "Description" TEXT NULL,
+    "StageName" VARCHAR(40) NOT NULL,
+    "Amount" DECIMAL(18, 2) NULL,
+    "Probability" DECIMAL(5, 2) NULL,
+    "ExpectedRevenue" DECIMAL(18, 2) GENERATED ALWAYS AS (CAST("Amount" * ("Probability" / 100.0) AS DECIMAL(18, 2))) STORED,
+    "CloseDate" DATE NOT NULL,
+    "Type" VARCHAR(40) NULL,
+    "LeadSource" VARCHAR(40) NULL,
+    "IsClosed" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsClosed" DEFAULT FALSE,
+    "IsWon" BOOLEAN NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_IsWon" DEFAULT FALSE,
+    "ForecastCategoryName" VARCHAR(40) NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_ForecastCategoryName" DEFAULT ('Pipeline'),
+    "CampaignId" VARCHAR(18) NULL,
+    "Pricebook2Id" VARCHAR(18) NULL,
+    "OwnerId" VARCHAR(18) NOT NULL,
+    "CreatedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_CreatedDate" DEFAULT (CURRENT_TIMESTAMP),
+    "CreatedById" VARCHAR(18) NOT NULL,
+    "LastModifiedDate" TIMESTAMPTZ NOT NULL CONSTRAINT "DF_Salesforce_Opportunity_LastModifiedDate" DEFAULT (CURRENT_TIMESTAMP),
+    "LastModifiedById" VARCHAR(18) NOT NULL,
+    CONSTRAINT "PK_Salesforce_Opportunity" PRIMARY KEY  ("Id"),
+    CONSTRAINT "FK_Salesforce_Opportunity_AccountId" FOREIGN KEY ("AccountId") REFERENCES "Salesforce"."Account" ("Id"),
+    CONSTRAINT "FK_Salesforce_Opportunity_CampaignId" FOREIGN KEY ("CampaignId") REFERENCES "Salesforce"."Campaign" ("Id"),
+    CONSTRAINT "FK_Salesforce_Opportunity_Pricebook2Id" FOREIGN KEY ("Pricebook2Id") REFERENCES "Salesforce"."Pricebook2" ("Id"),
+    CONSTRAINT "FK_Salesforce_Opportunity_OwnerId" FOREIGN KEY ("OwnerId") REFERENCES "Salesforce"."User" ("Id"),
+    CONSTRAINT "FK_Salesforce_Opportunity_CreatedById" FOREIGN KEY ("CreatedById") REFERENCES "Salesforce"."User" ("Id"),
+    CONSTRAINT "FK_Salesforce_Opportunity_LastModifiedById" FOREIGN KEY ("LastModifiedById") REFERENCES "Salesforce"."User" ("Id")
 );
 
 -- Table: Salesforce.PricebookEntry

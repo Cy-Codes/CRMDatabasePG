@@ -79,7 +79,7 @@ BEGIN
     SELECT COUNT(*) INTO v_proc_count
     FROM information_schema.routines
     WHERE specific_schema = 'public'
-      AND routine_name IN ('sp_cleanupallcrmdata', 'sp_seedstandarddata', 'sp_simulateheavyetlload');
+      AND LOWER(routine_name) IN ('sp_cleanupallcrmdata', 'sp_seedstandarddata', 'sp_simulateheavyetlload');
 
     IF v_proc_count >= 3 THEN
         RAISE NOTICE '[PASS] Test 1.5: Core utility stored procedures (sp_CleanupAllCRMData, sp_SeedStandardData, sp_SimulateHeavyETLLoad) exist.';
