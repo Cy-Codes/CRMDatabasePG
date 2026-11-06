@@ -51,6 +51,13 @@ PostgreSQL schemas provide clean namespace boundaries for CRM domains:
 - `"Dynamics365"`: 11 tables modeling Dataverse / Common Data Model.
 - Cross-schema queries must always qualify tables with their schema prefix.
 
+### 2.3 File & Folder Naming
+Follow PostgreSQL and Flyway defaults (lowercase `snake_case`):
+- **Folders** are lowercase (`migrations/`, `scripts/`, `tests/`).
+- **Migrations** use the Flyway pattern `V<version>__<snake_case_description>.sql` (`V6__indexes_and_optimizations.sql`).
+- **Operational and test SQL scripts** use a two-digit run-order prefix followed by `snake_case` words (`scripts/01_seed_standard_50records.sql`, `tests/04_run_all_tests.sql`).
+- **Reference DDL files** under `schema/<Schema>/` are named after the quoted object they define (`schema/Salesforce/Account.sql` → `"Salesforce"."Account"`).
+
 ---
 
 ## 3. Set-Based Logic Over Procedural Loops
@@ -121,3 +128,14 @@ Always use `TIMESTAMPTZ` (UTC-aware) instead of timezone-naive `TIMESTAMP` for a
 - **Python (`migrate.py`, `tests/run_tests.py`)**: Zero-dependency, `from __future__ import annotations`, `@dataclass(frozen=True)` descriptors, `tuple(map(...))` pipelines, and parameterized `psql -v` bind variables (`:'mig_version'`, `:'mig_desc'`).
 - **Bash (`migrate.sh`, `tests/run_tests.sh`, `entrypoint.sh`)**: Enforces `set -euo pipefail`, `readonly` constants, and reusable `run_psql_query` / `run_psql_suite` helper functions.
 - **Pre-Commit Auto-Formatting**: On every `git commit`, the installed pre-commit hook automatically formats staged files (while protecting immutable `migrations/V*.sql` files), removes unused Python imports, validates `py_compile` and `bash -n` syntax, and re-stages changes.
+
+---
+
+## 7. Container Image & Cloud-Agnostic Schema Migrator
+
+The repository image doubles as a one-shot schema migrator that `crm-infra/` points at any PostgreSQL endpoint (local container, Amazon RDS for PostgreSQL, Azure Database for PostgreSQL Flexible Server). See [crm-infra/CODING_STANDARDS.md](file:///Users/cy/codes/localstack-reference-architecture/crm-infra/CODING_STANDARDS.md) and ADR 12 in [docs/architecture-decisions.md](file:///Users/cy/codes/localstack-reference-architecture/docs/architecture-decisions.md).
+
+- **Single Migration Path**: `entrypoint.sh` (installed as `/docker-entrypoint-initdb.d/99_crm_init.sh`) delegates to `migrate.sh`, which is the only migration + seed implementation used by the local container and by `crm-infra/terraform/modules/shared/database-schema`. Never duplicate migration logic elsewhere.
+- **Environment-Only Inputs**: Targets are supplied via standard libpq variables (`PGHOST`, `PGPORT`, `PGSSLMODE`) plus `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `SEED_DATA`, with `readonly DEFAULT_*` fallbacks where a safe local default exists. When the local Unix socket exists it is preferred; otherwise the remote `PGHOST` is used.
+- **Idempotent Re-Runs**: `migrate.sh` records each applied version in `public.schema_version` and skips versions already applied successfully, so re-running against an up-to-date database is a no-op; merged `V*.sql` files remain immutable (Section 2).
+- **Secrets Hygiene**: Default development credentials live only in `.env.example` and script defaults for local use; real environments always inject credentials at runtime.

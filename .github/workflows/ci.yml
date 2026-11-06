@@ -51,7 +51,7 @@ jobs:
         run: python3 ./migrate.py
 
       - name: Seed Standard CRM Data (50 records per entity)
-        run: psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f scripts/01_seed_standard_data.sql
+        run: psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f scripts/01_seed_standard_50records.sql
 
       - name: Run Database Test Suites (Bash Runner)
         run: ./tests/run_tests.sh

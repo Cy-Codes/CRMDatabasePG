@@ -26,10 +26,19 @@ run_psql_query() {
     psql -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" -d "${target_db}" -v ON_ERROR_STOP=1 "$@"
 }
 
+# psql only interpolates :'variables' in scripts read from stdin or -f (never in -c),
+# so parameterized statements are streamed through stdin.
+run_psql_parameterized() {
+    local target_db="$1"
+    local sql="$2"
+    shift 2
+    run_psql_query "${target_db}" "$@" <<< "${sql}"
+}
+
 echo "==> Connecting to PostgreSQL at ${PGHOST}:${PGPORT}/${PGDATABASE} as user '${PGUSER}'..."
 
 # Ensure target database exists using parameterized psql variables
-run_psql_query postgres -v target_db="${PGDATABASE}" -tc "SELECT 1 FROM pg_database WHERE datname = :'target_db'" | grep -q 1 \
+run_psql_parameterized postgres "SELECT 1 FROM pg_database WHERE datname = :'target_db';" -v target_db="${PGDATABASE}" -tA | grep -q 1 \
     || run_psql_query postgres -c "CREATE DATABASE \"${PGDATABASE}\";"
 
 # Create migration tracking table if not exists (using SQL standard IDENTITY column)
@@ -64,7 +73,7 @@ apply_migration_file() {
     version="$(echo "${filename}" | sed -E 's/^V([0-9]+)__.*$/\1/')"
     description="$(echo "${filename}" | sed -E 's/^V[0-9]+__(.*)\.sql$/\1/' | tr '_' ' ')"
 
-    applied="$(run_psql_query "${PGDATABASE}" -v mig_version="${version}" -tAc "SELECT 1 FROM public.schema_version WHERE version = :'mig_version' AND success = TRUE;")"
+    applied="$(run_psql_parameterized "${PGDATABASE}" "SELECT 1 FROM public.schema_version WHERE version = :'mig_version' AND success = TRUE;" -v mig_version="${version}" -tA)"
 
     if [ "${applied}" = "1" ]; then
         echo "  [SKIP] Migration V${version} (${filename}) already applied."
@@ -82,15 +91,14 @@ apply_migration_file() {
     end_time="$(date +%s)"
     duration=$(( (end_time - start_time) * MS_PER_SECOND ))
 
-    run_psql_query "${PGDATABASE}" \
+    run_psql_parameterized "${PGDATABASE}" "
+        INSERT INTO public.schema_version (version, description, script, execution_time_ms, success)
+        VALUES (:'mig_version', :'mig_desc', :'mig_script', :'mig_duration'::integer, TRUE);
+        " \
         -v mig_version="${version}" \
         -v mig_desc="${description}" \
         -v mig_script="${filename}" \
-        -v mig_duration="${duration}" \
-        -c "
-        INSERT INTO public.schema_version (version, description, script, execution_time_ms, success)
-        VALUES (:'mig_version', :'mig_desc', :'mig_script', :'mig_duration'::integer, TRUE);
-        "
+        -v mig_duration="${duration}"
     echo "  [SUCCESS] Migration V${version} applied in ${duration} ms."
 }
 
