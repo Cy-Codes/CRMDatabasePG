@@ -7,7 +7,7 @@
 CALL "public"."sp_SeedStandardData"(TRUE);
 
 -- Verify row counts across all 3 CRM schemas
-SELECT 
+SELECT
     schemaname AS "Schema",
     relname AS "Table",
     n_live_tup AS "RowCount"

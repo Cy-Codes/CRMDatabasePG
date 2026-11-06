@@ -8,7 +8,7 @@
 CALL "public"."sp_SimulateHeavyETLLoad"(100, TRUE);
 
 -- Verify row counts and storage metrics across all schemas
-SELECT 
+SELECT
     schemaname AS "Schema",
     relname AS "Table",
     n_live_tup AS "RowCount",
