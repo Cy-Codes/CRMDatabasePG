@@ -4,6 +4,8 @@ A production-grade PostgreSQL implementation of multi-CRM enterprise schemas (**
 
 This repository is designed as the direct architectural counterpart to **CRMDatabaseMS** (which utilizes a declarative, state-based DACPAC deployment strategy), allowing teams to evaluate, benchmark, and compare state-based vs. migration-based database lifecycles.
 
+For migration immutability rules, SQL standards, and PostgreSQL best practices, consult the **[CRMDatabasePG Coding Standards](file:///Users/cy/codes/localstack-reference-architecture/CRMDatabasePG/CODING_STANDARDS.md)** and workspace **[Coding Standards](file:///Users/cy/codes/localstack-reference-architecture/CODING_STANDARDS.md)**.
+
 ---
 
 ## 🏛️ Architecture Overview
