@@ -11,7 +11,6 @@ import os
 import re
 import subprocess
 import sys
-import time
 
 DEFAULT_PGHOST: str = "localhost"
 DEFAULT_PGPORT: str = "5432"
@@ -131,64 +130,62 @@ def run_psql(
     return res
 
 
-def is_migration_applied(config: PostgresMigrationConfig, version: str) -> bool:
-    """Side-effecting database read checking whether a migration version is already recorded."""
-    check_sql = "SELECT 1 FROM public.schema_version WHERE version = :'mig_version' AND success = TRUE;"
-    res = run_psql(config, sql=check_sql, variables={"mig_version": version}, check=False)
-    return "1" in res.stdout.strip().splitlines()
+ACQUIRE_LOCK_SQL: str = "SELECT pg_advisory_lock(hashtext('crm_migration_lock'));"
+RELEASE_LOCK_SQL: str = "SELECT pg_advisory_unlock(hashtext('crm_migration_lock'));"
 
 
-def apply_migration_if_pending(config: PostgresMigrationConfig, descriptor: MigrationDescriptor) -> None:
-    """Explicit side-effecting command applying a single migration and recording its metadata."""
-    if is_migration_applied(config, descriptor.version):
-        print(f"  [SKIP] Migration V{descriptor.version} ({descriptor.filename}) already applied.")
-        return
+def quote_sql_literal(value: str) -> str:
+    """Pure transformation escaping a value as a single-quoted SQL string literal."""
+    return "'" + value.replace("'", "''") + "'"
 
-    print(f"  [APPLYING] Migration V{descriptor.version}: {descriptor.filename}...")
-    t0 = time.time()
-    run_psql(config, filepath=descriptor.filepath)
-    duration_ms = int((time.time() - t0) * MS_PER_SECOND)
 
-    record_sql = """
-    INSERT INTO public.schema_version (version, description, script, execution_time_ms, success)
-    VALUES (:'mig_version', :'mig_desc', :'mig_script', :'mig_duration'::integer, TRUE);
-    """
-    run_psql(
-        config,
-        sql=record_sql,
-        variables={
-            "mig_version": descriptor.version,
-            "mig_desc": descriptor.description,
-            "mig_script": descriptor.filename,
-            "mig_duration": str(duration_ms),
-        },
-    )
-    print(f"  [SUCCESS] Migration V{descriptor.version} applied in {duration_ms} ms.")
+def build_migration_step(descriptor: MigrationDescriptor) -> str:
+    """Pure transformation rendering the psql script fragment that applies one migration if pending and records it."""
+    version = quote_sql_literal(descriptor.version)
+    description = quote_sql_literal(descriptor.description)
+    script = quote_sql_literal(descriptor.filename)
+    return f"""
+SELECT EXISTS (SELECT 1 FROM public.schema_version WHERE version = {version} AND success = TRUE) AS applied \\gset
+\\if :applied
+\\echo   [SKIP] Migration V{descriptor.version} ({descriptor.filename}) already applied.
+\\else
+\\echo   [APPLYING] Migration V{descriptor.version}: {descriptor.filename}...
+SELECT clock_timestamp() AS mig_start \\gset
+BEGIN;
+\\i {quote_sql_literal(descriptor.filepath)}
+INSERT INTO public.schema_version (version, description, script, execution_time_ms, success)
+VALUES (
+    {version},
+    {description},
+    {script},
+    CAST(EXTRACT(EPOCH FROM (clock_timestamp() - :'mig_start'::timestamptz)) * {MS_PER_SECOND} AS INTEGER),
+    TRUE
+);
+COMMIT;
+\\echo   [SUCCESS] Migration V{descriptor.version} applied.
+\\endif
+"""
+
+
+def build_migration_script(descriptors: tuple[MigrationDescriptor, ...]) -> str:
+    """Pure transformation composing one psql session script: lock, schema table, migrations, unlock."""
+    return "\n".join((ACQUIRE_LOCK_SQL, INIT_SCHEMA_VERSION_SQL, *map(build_migration_step, descriptors), RELEASE_LOCK_SQL))
 
 
 def main() -> None:
     config = resolve_config()
     print(f"==> Connecting to PostgreSQL at {config.host}:{config.port}/{config.database}...")
 
-    run_psql(config, sql=INIT_SCHEMA_VERSION_SQL)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    migrations_dir = os.path.join(base_dir, "migrations")
+    sorted_files = sorted(glob.glob(os.path.join(migrations_dir, "V*.sql")), key=natural_sort_key)
+    descriptors = tuple(map(parse_migration_descriptor, sorted_files))
 
-    print("==> Acquiring migration advisory lock...")
-    run_psql(config, sql="SELECT pg_advisory_lock(hashtext('crm_migration_lock'));")
-
-    try:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        migrations_dir = os.path.join(base_dir, "migrations")
-        sorted_files = sorted(glob.glob(os.path.join(migrations_dir, "V*.sql")), key=natural_sort_key)
-        descriptors = tuple(map(parse_migration_descriptor, sorted_files))
-
-        print(f"==> Found {len(descriptors)} migration files in {migrations_dir}")
-        for descriptor in descriptors:
-            apply_migration_if_pending(config, descriptor)
-
-        print("==> All migrations applied successfully!")
-    finally:
-        print("==> Releasing migration advisory lock...")
-        run_psql(config, sql="SELECT pg_advisory_unlock(hashtext('crm_migration_lock'));", check=False)
+    print(f"==> Found {len(descriptors)} migration files in {migrations_dir}")
+    print("==> Applying migrations in one session holding the advisory lock...")
+    res = run_psql(config, sql=build_migration_script(descriptors))
+    print(res.stdout, end="")
+    print("==> All migrations applied successfully!")
 
 
 if __name__ == "__main__":
