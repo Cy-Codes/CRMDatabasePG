@@ -37,6 +37,20 @@ run_psql_parameterized() {
 
 echo "==> Connecting to PostgreSQL at ${PGHOST}:${PGPORT}/${PGDATABASE} as user '${PGUSER}'..."
 
+echo "==> Waiting for PostgreSQL to be ready at ${PGHOST}:${PGPORT}..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+until pg_isready -h "${PGHOST}" -p "${PGPORT}" -U "${PGUSER}" >/dev/null 2>&1 || [ "${RETRY_COUNT}" -eq "${MAX_RETRIES}" ]; do
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "  PostgreSQL not ready yet, retrying in 2s (${RETRY_COUNT}/${MAX_RETRIES})..."
+    sleep 2
+done
+
+if [ "${RETRY_COUNT}" -eq "${MAX_RETRIES}" ]; then
+    echo "Error: PostgreSQL is not reachable at ${PGHOST}:${PGPORT} after ${MAX_RETRIES} attempts." >&2
+    exit 1
+fi
+
 # Ensure target database exists using parameterized psql variables
 run_psql_parameterized postgres "SELECT 1 FROM pg_database WHERE datname = :'target_db';" -v target_db="${PGDATABASE}" -tA | grep -q 1 \
     || run_psql_query postgres -c "CREATE DATABASE \"${PGDATABASE}\";"
@@ -56,6 +70,15 @@ CREATE TABLE IF NOT EXISTS public.schema_version (
     success BOOLEAN NOT NULL DEFAULT TRUE
 );
 "
+
+echo "==> Acquiring migration advisory lock..."
+run_psql_query "${PGDATABASE}" -c "SELECT pg_advisory_lock(hashtext('crm_migration_lock'));"
+
+cleanup_lock() {
+    echo "==> Releasing migration advisory lock..."
+    run_psql_query "${PGDATABASE}" -c "SELECT pg_advisory_unlock(hashtext('crm_migration_lock'));" >/dev/null 2>&1 || true
+}
+trap cleanup_lock EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIGRATIONS_DIR="${SCRIPT_DIR}/migrations"

@@ -103,9 +103,7 @@ def run_psql(
         for flag in ("-v", f"{key}={val}")
     ]
     action_flags = (
-        ["-c", sql]
-        if sql
-        else ["--single-transaction", "-f", filepath]
+        ["--single-transaction", "-f", filepath]
         if filepath
         else []
     )
@@ -119,7 +117,14 @@ def run_psql(
         *var_flags,
         *action_flags,
     ]
-    res = subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
+    res = subprocess.run(
+        cmd,
+        input=sql if sql is not None else None,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     if check and res.returncode != 0:
         print(f"Error executing SQL:\n{res.stderr}", file=sys.stderr)
         sys.exit(res.returncode)
@@ -167,16 +172,23 @@ def main() -> None:
 
     run_psql(config, sql=INIT_SCHEMA_VERSION_SQL)
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    migrations_dir = os.path.join(base_dir, "migrations")
-    sorted_files = sorted(glob.glob(os.path.join(migrations_dir, "V*.sql")), key=natural_sort_key)
-    descriptors = tuple(map(parse_migration_descriptor, sorted_files))
+    print("==> Acquiring migration advisory lock...")
+    run_psql(config, sql="SELECT pg_advisory_lock(hashtext('crm_migration_lock'));")
 
-    print(f"==> Found {len(descriptors)} migration files in {migrations_dir}")
-    for descriptor in descriptors:
-        apply_migration_if_pending(config, descriptor)
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        migrations_dir = os.path.join(base_dir, "migrations")
+        sorted_files = sorted(glob.glob(os.path.join(migrations_dir, "V*.sql")), key=natural_sort_key)
+        descriptors = tuple(map(parse_migration_descriptor, sorted_files))
 
-    print("==> All migrations applied successfully!")
+        print(f"==> Found {len(descriptors)} migration files in {migrations_dir}")
+        for descriptor in descriptors:
+            apply_migration_if_pending(config, descriptor)
+
+        print("==> All migrations applied successfully!")
+    finally:
+        print("==> Releasing migration advisory lock...")
+        run_psql(config, sql="SELECT pg_advisory_unlock(hashtext('crm_migration_lock'));", check=False)
 
 
 if __name__ == "__main__":
