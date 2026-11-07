@@ -79,7 +79,7 @@ jobs:
         run: |
           echo "Waiting for crm_database_pg initialization..."
           for i in {1..60}; do
-            if docker logs crm_database_pg 2>&1 | grep -q "CRM Database initialization complete"; then
+            if docker logs crm_database_pg 2>&1 | grep -q "PostgreSQL CRM Database is ready for connections"; then
               echo "Container initialized and seeded!"
               break
             fi
